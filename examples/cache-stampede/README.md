@@ -52,6 +52,8 @@ out to the source. A fallback that lets every request query the database can
 recreate the stampede. This pattern targets recomputable, read-heavy data; it
 is not a drop-in consistency strategy for balances, payments, or inventory.
 Use Redis authentication and TLS outside a local development environment.
+This sample uses a single Redis node. On Redis Cluster, the lock and data keys
+must share a hash slot for the Lua operation; adapt the key format before use.
 
 Sources: [Redis cache-aside](https://redis.io/docs/latest/develop/use-cases/cache-aside/go/),
 [SET NX PX](https://redis.io/docs/latest/commands/set/),
