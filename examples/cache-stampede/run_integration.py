@@ -25,15 +25,17 @@ def worker(db_path: str, count: int, namespace: str, start: mp.Event,
     def load_products():
         client.incr(f"{namespace}:origin_reads")
         with sqlite3.connect(db_path) as conn:
-            # Actual database read. Query work makes concurrent misses observable.
             rows = conn.execute("""
-                WITH RECURSIVE tally(n) AS (
-                    SELECT 1 UNION ALL SELECT n+1 FROM tally WHERE n<100000
-                )
-                SELECT p.id, p.name, p.price_cents, (SELECT SUM(n) FROM tally)
-                FROM products p ORDER BY p.id
+                SELECT p.id, p.name, p.price_cents, SUM(oi.quantity) AS units_sold
+                FROM products AS p
+                JOIN order_items AS oi ON oi.product_id = p.id
+                WHERE p.active = 1 AND oi.age_days <= 30
+                GROUP BY p.id
+                ORDER BY units_sold DESC, p.id
+                LIMIT 20
             """).fetchall()
-        return [{"id": r[0], "name": r[1], "price_cents": r[2]} for r in rows]
+        return [{"id": r[0], "name": r[1], "price_cents": r[2],
+                 "units_sold": r[3]} for r in rows]
 
     start.wait()
     with ThreadPoolExecutor(max_workers=count) as pool:
@@ -48,9 +50,21 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         db_path = str(Path(tmp) / "catalog.sqlite3")
         with sqlite3.connect(db_path) as conn:
-            conn.execute("CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price_cents INTEGER)")
-            conn.executemany("INSERT INTO products VALUES (?, ?, ?)",
-                             [(1, "Phone case", 1499), (2, "Charger", 2499)])
+            conn.execute("""CREATE TABLE products (
+                id INTEGER PRIMARY KEY, name TEXT NOT NULL,
+                price_cents INTEGER NOT NULL, active INTEGER NOT NULL
+            )""")
+            conn.execute("""CREATE TABLE order_items (
+                product_id INTEGER NOT NULL, quantity INTEGER NOT NULL,
+                age_days INTEGER NOT NULL
+            )""")
+            conn.executemany("INSERT INTO products VALUES (?, ?, ?, ?)",
+                             ((i, f"Product {i}", 1000 + i % 9000, 1)
+                              for i in range(1, 5001)))
+            conn.executemany("INSERT INTO order_items VALUES (?, ?, ?)",
+                             (((i * 17) % 5000 + 1, i % 4 + 1, i % 45)
+                              for i in range(250000)))
+            conn.execute("CREATE INDEX order_items_recent ON order_items(age_days, product_id)")
         start, output = mp.Event(), mp.Queue()
         counts = (34, 33, 33)
         processes = [mp.Process(target=worker, args=(db_path, n, namespace, start, output))
