@@ -1,5 +1,6 @@
 """Exercise the real Redis gate against SQLite using three API processes."""
 
+import hashlib
 import json
 import multiprocessing as mp
 import os
@@ -40,7 +41,10 @@ def worker(db_path: str, count: int, namespace: str, start: mp.Event,
     start.wait()
     with ThreadPoolExecutor(max_workers=count) as pool:
         results = list(pool.map(lambda _: gate.get_or_load(KEY, load_products), range(count)))
-    output.put((len(results), all(value == results[0] for value in results)))
+    digest = hashlib.sha256(
+        json.dumps(results[0], sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    output.put((len(results), all(value == results[0] for value in results), digest))
 
 
 def main():
@@ -79,13 +83,16 @@ def main():
     result = {
         "stack": "Python 3 + redis-py 8.1.0 + Redis 8.2 + SQLite",
         "api_processes": len(counts),
-        "concurrent_requests": sum(n for n, _ in reports),
-        "responses_identical": all(ok for _, ok in reports),
+        "concurrent_requests": sum(n for n, _, _ in reports),
+        "responses_identical": (
+            all(ok for _, ok, _ in reports)
+            and len({digest for _, _, digest in reports}) == 1
+        ),
         "sqlite_reads": int(client.get(f"{namespace}:origin_reads") or 0),
     }
     print(json.dumps(result, indent=2))
     assert result["concurrent_requests"] == 100
-    assert result["responses_identical"]
+    assert result["responses_identical"], "Responses differ within or across API processes"
     assert result["sqlite_reads"] == 1
     client.delete(f"{namespace}:data:{KEY}", f"{namespace}:lock:{KEY}",
                   f"{namespace}:origin_reads")
