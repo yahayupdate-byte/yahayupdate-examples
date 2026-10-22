@@ -23,11 +23,13 @@ python verify_edge_cases.py
 docker compose down
 ```
 
-The integration check creates a real SQLite table, starts three API processes,
-and sends 100 requests for the same empty cache key. It asserts 100 identical
-responses and one SQLite load. The SQL query performs work so concurrent
-misses overlap. This is not a latency benchmark or a claim about production
-traffic.
+The integration check creates SQLite `products` and `order_items` tables with
+generated fixture rows (5,000 products and 250,000 order items). Its source
+query returns the 20 best-selling active products from the last 30 days. It
+starts three API processes and sends 100 requests for the same empty cache
+key. It asserts 100 identical responses and one SQLite load. The fixture data
+is synthetic; Redis and SQLite are real services. This is not a latency
+benchmark or a claim about production traffic.
 The edge check confirms that an expired owner cannot publish over a new lock
 and that a follower times out without querying the source.
 
