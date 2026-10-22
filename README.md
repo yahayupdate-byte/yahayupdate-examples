@@ -7,5 +7,8 @@ example states its stack, how to run it, what it verifies, and its limitations.
 
 - [Prevent a cache stampede across API processes](examples/cache-stampede/README.md)
 
+GitHub Actions runs each integration check against a Redis service on pushes
+to `main` and pull requests.
+
 When an example claims to verify behavior, it uses actual services and a
 repeatable integration check. A local check is not a production benchmark.
