@@ -8,5 +8,6 @@
   "concurrent_requests": 100,
   "responses_identical": true,
   "sqlite_reads": 1,
+  "response_check": "Compared within and across all three API processes",
   "note": "This verifies one local burst, not production latency or exactly-once behavior under failures."
 }
