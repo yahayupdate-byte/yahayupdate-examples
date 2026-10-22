@@ -1,13 +1,17 @@
-# Una carga por clave, incluso con varias instancias
+# One load per key across API processes
 
-**Stack:** Python 3.11+, redis-py 8.1.0, Redis 8.2, SQLite.
+**Stack:** Python 3.11+, redis-py 8.1.0, Redis 8.2, SQLite, Docker Compose.
 
-Este ejemplo implementa cache-aside para un catálogo de lectura frecuente. Si
-una clave vence, una instancia obtiene un bloqueo corto con `SET NX PX`; las
-demás esperan el valor en Redis. Un token y un script Lua impiden que un líder
-que perdió el bloqueo publique un resultado tardío o borre el bloqueo ajeno.
+- **Python + redis-py** implement the API's cache-aside path.
+- **Redis** stores the temporary result and coordinates a short lock per key.
+- **SQLite** holds a real product catalog and records origin queries.
+- **Docker Compose** starts Redis locally for a repeatable integration run.
 
-## Ejecutar
+On a cache miss, one process acquires a short lock with `SET NX PX`; other
+processes wait for the cached value. An ownership token and Lua script prevent
+an expired leader from publishing late or deleting another leader's lock.
+
+## Run
 
 ```sh
 docker compose up -d
@@ -18,32 +22,34 @@ python run_integration.py
 docker compose down
 ```
 
-La prueba crea una tabla SQLite real, inicia tres procesos de API y envía 100
-peticiones por la misma clave vacía. Cuenta las consultas ejecutadas contra
-SQLite y exige 100 respuestas iguales con una sola carga. La consulta incluye
-trabajo SQL para mantener el primer miss en vuelo mientras llegan los demás.
-No es un benchmark de latencia ni una predicción de ahorro en producción.
+The integration check creates a real SQLite table, starts three API processes,
+and sends 100 requests for the same empty cache key. It asserts 100 identical
+responses and one SQLite load. The SQL query performs work so concurrent
+misses overlap. This is not a latency benchmark or a claim about production
+traffic.
 
-## Cómo aplicarlo
+## Adapt it to an API
 
-1. Usa un `loader` que lea tu fuente de datos. El valor debe ser serializable
-   como JSON y el trabajo debe terminar antes del TTL del bloqueo.
-2. Elige un namespace y clave que identifiquen exactamente el dato. No agrupes
-   parámetros distintos bajo una misma clave.
-3. Tras escribir correctamente en la base de datos, llama `invalidate(key)`;
-   define la tolerancia a datos antiguos antes de usar esto en tu producto.
-4. Observa misses, cargas al origen, espera, timeouts y errores de Redis.
+1. Replace the example loader with your source query. It must return a
+   JSON-serializable value and finish within the lock TTL under normal load.
+2. Include every result-changing input in the cache key. Do not share one
+   key between users or query variants that require different data.
+3. After a successful source write, call `invalidate(key)`. For strict
+   freshness, also address the race between an in-flight read and invalidation
+   with versioned keys, generation checks, or an appropriate transaction design.
+4. Observe cache misses, origin loads, follower wait time, timeouts, and Redis
+   errors. Define the API response when a follower times out.
 
-## Límites de producción
+## Production limits
 
-El bloqueo de Redis reduce cargas duplicadas; no garantiza exclusión absoluta
-si la consulta excede su TTL. Para cargas lentas, mide y ajusta `lock_ms` o
-renueva el bloqueo de forma segura. Los seguidores fallan tras `wait_s`, en
-lugar de multiplicar las consultas. Maneja ese error en la API con una respuesta
-acorde a tu producto. Este ejemplo no es apropiado para datos de pagos, saldos
-o inventario con requisitos de consistencia fuerte. Usa autenticación y TLS
-para Redis fuera del entorno local.
+The Redis lock reduces duplicate loads; it does not guarantee exactly one
+origin read if a load exceeds the lock TTL. Measure load duration and adjust
+the TTL or use safe renewal. Followers fail after `wait_s` instead of fanning
+out to the source. A fallback that lets every request query the database can
+recreate the stampede. This pattern targets recomputable, read-heavy data; it
+is not a drop-in consistency strategy for balances, payments, or inventory.
+Use Redis authentication and TLS outside a local development environment.
 
-Fuentes: [cache-aside de Redis](https://redis.io/docs/latest/develop/use-cases/cache-aside/go/),
+Sources: [Redis cache-aside](https://redis.io/docs/latest/develop/use-cases/cache-aside/go/),
 [SET NX PX](https://redis.io/docs/latest/commands/set/),
-[redis-py async y sync](https://redis.io/docs/latest/develop/clients/redis-py/).
+[redis-py](https://redis.io/docs/latest/develop/clients/redis-py/).
