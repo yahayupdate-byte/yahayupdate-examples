@@ -1,11 +1,11 @@
-# Ya Hay Update · ejemplos ejecutables
+# Ya Hay Update · Runnable architecture examples
 
-Código de apoyo para los artículos de arquitectura. Cada ejemplo declara su stack,
-cómo ejecutarlo, qué comprueba y qué límites conserva.
+Code that accompanies Ya Hay Update's software architecture articles. Each
+example states its stack, how to run it, what it verifies, and its limitations.
 
-## Ejemplos
+## Examples
 
-- [Evitar una estampida de caché con Redis](examples/cache-stampede/README.md)
+- [Prevent a cache stampede across API processes](examples/cache-stampede/README.md)
 
-Los ejemplos usan servicios reales cuando afirman probar un comportamiento. Una
-prueba de integración local no equivale a resultados de producción.
+When an example claims to verify behavior, it uses actual services and a
+repeatable integration check. A local check is not a production benchmark.
