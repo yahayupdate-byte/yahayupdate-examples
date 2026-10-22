@@ -19,6 +19,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 python run_integration.py
+python verify_edge_cases.py
 docker compose down
 ```
 
@@ -27,6 +28,8 @@ and sends 100 requests for the same empty cache key. It asserts 100 identical
 responses and one SQLite load. The SQL query performs work so concurrent
 misses overlap. This is not a latency benchmark or a claim about production
 traffic.
+The edge check confirms that an expired owner cannot publish over a new lock
+and that a follower times out without querying the source.
 
 ## Adapt it to an API
 
