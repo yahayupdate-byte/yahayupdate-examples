@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-22",
+  "environment": "local integration run",
+  "stack": "Python 3.13 + redis-py 8.1.0 + Redis 8.2 + SQLite",
+  "api_processes": 3,
+  "fixture_products": 5000,
+  "fixture_order_items": 250000,
+  "concurrent_requests": 100,
+  "responses_identical": true,
+  "sqlite_reads": 1,
+  "response_check": "Compared within and across all three API processes",
+  "note": "This verifies one local burst, not production latency or exactly-once behavior under failures."
+}

@@ -1,0 +1,45 @@
+{
+  "model": "qwen3:4b",
+  "evidence": {
+    "date": "2026-10-22",
+    "environment": "local integration run",
+    "stack": "Python 3.13 + redis-py 8.1.0 + Redis 8.2 + SQLite",
+    "api_processes": 3,
+    "fixture_products": 5000,
+    "fixture_order_items": 250000,
+    "concurrent_requests": 100,
+    "responses_identical": true,
+    "sqlite_reads": 1,
+    "response_check": "Compared within and across all three API processes",
+    "note": "This verifies one local burst, not production latency or exactly-once behavior under failures."
+  },
+  "analyst": {
+    "summary": "This is a local integration test run with 3 API processes handling 100 concurrent requests. The test uses 250,000 fixture order items and 5,000 fixture products. It measures 1 SQLite read operation. The test confirms responses are identical across all API processes, but does not represent production latency or guarantee exactly-once behavior under failures.",
+    "evidence_keys": [
+      "concurrent_requests",
+      "sqlite_reads",
+      "api_processes"
+    ],
+    "next_step": "Verify production readiness with a production benchmark"
+  },
+  "reviewer": {
+    "verdict": "revise",
+    "reason": "The analyst claims the test does NOT prove production behavior, which is a valid limitation. However, the claim that '100 requests and 1 SQLite read are compatible' is misleading because the test measures 100 concurrent requests (not 100 requests total) and 1 SQLite read (not 1:1 ratio). The test does not guarantee exactly-once behavior, and the analyst's statement about compatibility is not a production claim but a misinterpretation of the test's scope. The test is a local integration run with specific fixtures and does not represent production latency or failure scenarios.",
+    "required_measurement": "p95 latency under representative load"
+  },
+  "run_at": "2026-10-27T16:04:22.582427+00:00",
+  "evidence_sha256": "309f29e1d3c05ee0cb73a1f1b33a59e522970e6e7c63699d6b9f7cd7640bc81b",
+  "calls": [
+    {
+      "total_duration": 8060367916,
+      "prompt_eval_count": 222,
+      "eval_count": 128
+    },
+    {
+      "total_duration": 5473851334,
+      "prompt_eval_count": 392,
+      "eval_count": 158
+    }
+  ],
+  "decision": "human_review_required"
+}
