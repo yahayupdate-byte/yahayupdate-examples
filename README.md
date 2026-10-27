@@ -5,7 +5,7 @@ example states its stack, how to run it, what it verifies, and its limitations.
 
 ## Examples
 
-- [Evidence-aware handoff between two local AI roles](examples/ai-handoff/README.md) — Python + Ollama, contract tests and an archived real run.\n- [Prevent a cache stampede across API processes](examples/cache-stampede/README.md)
+- [Prevent a cache stampede across API processes](examples/cache-stampede/README.md)
 
 GitHub Actions runs the cache integration checks against a Redis service on pushes
 to `main` and pull requests.
