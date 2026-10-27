@@ -4,7 +4,7 @@ Python standard library + local Ollama + qwen3:4b. Two calls to the same model w
 
 ## Run
 
-Install Ollama from its official site and keep its service bound to loopback.
+Install Ollama from its official site and keep its service bound to loopback. Configure OLLAMA_BASE_URL privately in your shell with your own local service origin before running the example. No endpoint value, port number or credentials are distributed. The script rejects non-loopback origins, credentials, query strings and URL paths.
 
 ```sh
 ollama pull qwen3:4b
@@ -20,7 +20,7 @@ The input is a saved real local cache integration result from October 22. The Oc
 
 ## Limits
 
-No production benchmark, external tools, deployment or publication authority. No network A2A implementation. The script checks types, permitted references and enums, not arbitrary natural-language truth. Timeouts stop the caller; the server may still consume compute after disconnect. Production needs authentication, isolation, budgets, logging/redaction, retention policy and prompt-injection evaluations. Do not expose the local model endpoint to the Internet. The sample's loopback port is a documented local default, not a private server address.
+No production benchmark, external tools, deployment or publication authority. No network A2A implementation. The script checks types, permitted references and enums, not arbitrary natural-language truth. Timeouts stop the caller; the server may still consume compute after disconnect. Production needs authentication, isolation, budgets, logging/redaction, retention policy and prompt-injection evaluations. Do not expose the local model endpoint to the Internet. 
 
 Sources: https://docs.ollama.com/api/chat ; https://docs.ollama.com/capabilities/structured-outputs ; https://a2a-protocol.org/latest/topics/what-is-a2a/
 
@@ -29,3 +29,8 @@ Cache source repository: https://github.com/yahayupdate-byte/yahayupdate-example
 Article: [Spanish](https://www.yahayupdate.com/por-dentro/comunicacion-entre-ias/) · [English](https://www.yahayupdate.com/en/inside/ai-handoff/)
 
 Requires Python 3.10 or newer. Run the commands from this folder. The archived run used qwen3:4b, Q4_K_M, model digest 359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7. The model tag may change; use the saved digest to identify the tested model.
+
+
+## Publication configuration
+
+The archived October 27 model output predates the change from a fixed local endpoint to OLLAMA_BASE_URL. Prompts and model settings are unchanged. Seven offline checks pass after that change: five contract checks and two configuration checks. The model integration was not rerun for this configuration-only update. Tests patch the process environment, never substitute a model response. Keep local configuration and private logs out of commits, downloads and screenshots.

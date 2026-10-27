@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import json
 import hashlib
+import ipaddress
+import os
 from datetime import datetime, timezone
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 from pathlib import Path
 
 
-OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
 MODEL = "qwen3:4b"
 CALL_METRICS = []
 EVIDENCE_KEYS = (
@@ -59,6 +61,27 @@ REVIEWER_INSTRUCTIONS = (
 )
 
 
+def local_chat_url() -> str:
+    """Read deployment-specific configuration without publishing endpoint values."""
+    base_url = os.environ.get("OLLAMA_BASE_URL", "").strip()
+    if not base_url:
+        raise ValueError("Set OLLAMA_BASE_URL privately for your local Ollama service")
+    try:
+        parsed = urlsplit(base_url)
+        host = parsed.hostname
+        local = host == "localhost" or ipaddress.ip_address(host).is_loopback
+        valid = (parsed.scheme in {"http", "https"} and local
+                 and parsed.username is None and parsed.password is None
+                 and not parsed.query and not parsed.fragment
+                 and parsed.path in {"", "/"})
+        parsed.port  # Reject malformed configuration without echoing its value.
+    except (ValueError, TypeError):
+        valid = False
+    if not valid:
+        raise ValueError("OLLAMA_BASE_URL must be a loopback HTTP(S) origin without credentials")
+    return base_url.rstrip("/") + "/api/chat"
+
+
 def chat(system: str, user: str, schema: dict) -> dict:
     request_body = {
         "model": MODEL,
@@ -72,7 +95,7 @@ def chat(system: str, user: str, schema: dict) -> dict:
         ],
     }
     request = urllib.request.Request(
-        OLLAMA_URL,
+        local_chat_url(),
         data=json.dumps(request_body).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -157,8 +180,8 @@ def main() -> None:
     evidence = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     try:
         result = handoff(evidence)
-    except (urllib.error.URLError, TimeoutError, ValueError, TypeError, KeyError) as exc:
-        raise SystemExit(f"Handoff failed: {exc}") from exc
+    except (urllib.error.URLError, TimeoutError, ValueError, TypeError, KeyError, RuntimeError):
+        raise SystemExit("Handoff failed; check local configuration, service and input contract") from None
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 

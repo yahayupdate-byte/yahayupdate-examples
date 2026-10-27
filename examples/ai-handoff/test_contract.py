@@ -1,11 +1,22 @@
 """Verify the local trust boundary without replacing model integration tests."""
-import copy
+from unittest.mock import patch
 import json
 import unittest
 from pathlib import Path
-from agent_handoff import ANALYST_SCHEMA, REVIEWER_SCHEMA, validate_contract, validate_evidence
+from agent_handoff import ANALYST_SCHEMA, REVIEWER_SCHEMA, validate_contract, validate_evidence, local_chat_url
 
 class ContractTests(unittest.TestCase):
+    def test_local_endpoint_requires_private_configuration(self):
+        with patch.dict("os.environ", {}, clear=True), self.assertRaises(ValueError):
+            local_chat_url()
+
+    def test_only_loopback_origins_are_accepted(self):
+        for value in ["https://example.com", "http://localhost/path", "http://localhost?token=example", "http://localhost#fragment"]:
+            with self.subTest(value=value), patch.dict("os.environ", {"OLLAMA_BASE_URL": value}), self.assertRaises(ValueError):
+                local_chat_url()
+        with patch.dict("os.environ", {"OLLAMA_BASE_URL": "http://localhost"}):
+            self.assertEqual(local_chat_url(), "http://localhost/api/chat")
+
     def test_rejects_unknown_evidence_reference(self):
         for references in [["production_latency"], [True], [], "sqlite_reads"]:
             with self.subTest(references=references), self.assertRaises(ValueError):
